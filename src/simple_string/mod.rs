@@ -80,7 +80,7 @@ impl SimpleString {
     pub fn validate_value(input: &[u8]) -> Result<(), SimpleStringError> {
         let mut index = 0;
         let length = input.len();
-        while index < length && input[index] != 0x0a && input[index] != 0x0d {
+        while index < length && input[index] != 0x0d && input[index] != 0x0a {
             index += 1;
         }
         if index != length {
@@ -103,7 +103,6 @@ impl SimpleString {
             index += 1;
         }
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
-            println!("index: {}", index);
             return Err(SimpleStringError::InvalidTerminate);
         }
         let value = Self::new(&input[(*start + 1)..index]);

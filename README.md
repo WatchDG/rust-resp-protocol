@@ -1,5 +1,21 @@
 # rust-resp-protocol
 
+REdis Serialization Protocol
+
+## install
+
+add `resp-protocol` to `Cargo.toml`
+``` toml
+[dependencies]
+resp-protocol = "0.0.1"
+```
+
+## usage
+
+``` rust
+use resp_protocol;
+```
+
 ## Types
 * Simple string
 * Error
