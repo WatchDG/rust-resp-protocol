@@ -1,0 +1,8 @@
+[package]
+name = "resp-protocol"
+version = "0.0.1"
+authors = ["WatchDG <baranov@w3m.co>"]
+edition = "2018"
+
+[dependencies]
+bytes = "1"
