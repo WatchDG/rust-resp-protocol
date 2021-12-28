@@ -1,7 +1,13 @@
 [package]
 name = "resp-protocol"
+description = "REdis Serialization Protocol"
 version = "0.0.1"
 authors = ["WatchDG <baranov@w3m.co>"]
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/WatchDG/rust-resp-protocol"
+documentation = "https://docs.rs/resp-protocol"
+repository = "https://github.com/WatchDG/rust-resp-protocol"
+readme = "README.md"
 edition = "2018"
 
 [dependencies]
