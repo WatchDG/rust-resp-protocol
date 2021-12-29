@@ -5,6 +5,8 @@ use std::fmt;
 #[derive(Debug)]
 pub enum ErrorError {
     InvalidValueChar,
+    InvalidFirstChar,
+    InvalidTerminate,
 }
 
 impl fmt::Display for ErrorError {
@@ -12,6 +14,12 @@ impl fmt::Display for ErrorError {
         match self {
             ErrorError::InvalidValueChar => {
                 write!(f, "[ErrorError] Invalid value char.")
+            }
+            ErrorError::InvalidFirstChar => {
+                write!(f, "[ErrorError] Invalid first char.")
+            }
+            ErrorError::InvalidTerminate => {
+                write!(f, "[ErrorError] Invalid terminate.")
             }
         }
     }
@@ -68,13 +76,30 @@ impl Error {
     pub fn validate_value(input: &[u8]) -> Result<(), ErrorError> {
         let mut index = 0;
         let length = input.len();
-        while index < length && input[index] != 0x0a && input[index] != 0x0d {
+        while index < length && input[index] != 0x0d && input[index] != 0x0a {
             index += 1;
         }
         if index != length {
             return Err(ErrorError::InvalidValueChar);
         }
         Ok(())
+    }
+
+    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Error, ErrorError> {
+        let mut index = *start;
+        if input[index] != 0x2d {
+            return Err(ErrorError::InvalidFirstChar);
+        }
+        index += 1;
+        while index < *end && input[index] != 0x0d && input[index] != 0x0a {
+            index += 1;
+        }
+        if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
+            return Err(ErrorError::InvalidTerminate);
+        }
+        let value = Self::new(&input[(*start + 1)..index]);
+        *start = index + 2;
+        Ok(value)
     }
 }
 
@@ -115,5 +140,17 @@ mod tests_error {
     fn test_validate_invalid_value() {
         let value = b"Error\r\n message";
         assert_eq!(Error::validate_value(value).unwrap(), ())
+    }
+
+    #[test]
+    fn test_parse() {
+        let string = "-invalid length\r\n+bar\r\n";
+        let mut cursor = 0;
+        let end = string.len();
+        assert_eq!(
+            Error::parse(string.as_bytes(), &mut cursor, &end).unwrap(),
+            Error::new("invalid length".as_bytes())
+        );
+        assert_eq!(cursor, 17);
     }
 }

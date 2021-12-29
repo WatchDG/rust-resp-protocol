@@ -7,7 +7,7 @@ REdis Serialization Protocol
 add `resp-protocol` to `Cargo.toml`
 ``` toml
 [dependencies]
-resp-protocol = "0.0.1"
+resp-protocol = "0.0.2"
 ```
 
 ## usage
@@ -29,7 +29,7 @@ use resp_protocol;
 
 ##### Value
 
-``` rust
+``` text
 "+OK\r\n"
 ```
 
@@ -38,7 +38,7 @@ use resp_protocol;
 ``` rust
 use resp_protocol::SimpleString;
 
-let simple_string = SimpleString::new(b"OK");
+let simple_string: SimpleString = SimpleString::new(b"OK");
 ```
 
 ##### Parse
@@ -46,6 +46,33 @@ let simple_string = SimpleString::new(b"OK");
 ``` rust
 use resp_protocol::SimpleString;
 
-let string = "+OK\r\n";
-let simple_string = SimpleString::parse(string.as_bytes(), &mut 0, &string.len()).unwrap();
-``
+let string: &str = "+OK\r\n";
+let simple_string: SimpleString = SimpleString::parse(string.as_bytes(), &mut 0, &string.len()).unwrap();
+```
+
+### Error
+
+#### Examples
+
+##### Value
+
+``` text
+"-ERROR\r\n"
+```
+
+##### Build
+
+``` rust
+use resp_protocol::Error;
+
+let error: Error = Error::new(b"ERROR");
+```
+
+##### Parse
+
+``` rust
+use resp_protocol::Error;
+
+let string: &str = "-ERROR\r\n";
+let error: Error = Error::parse(string.as_bytes(), &mut 0, &string.len()).unwrap();
+```
