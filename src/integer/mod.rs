@@ -1,4 +1,4 @@
-use bytes::{Buf, BufMut, Bytes};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::error::Error;
 use std::fmt;
 
@@ -6,6 +6,8 @@ use std::fmt;
 pub enum IntegerError {
     InvalidValueChar,
     InvalidValue,
+    InvalidFirstChar,
+    InvalidTerminate,
 }
 
 impl fmt::Display for IntegerError {
@@ -16,6 +18,12 @@ impl fmt::Display for IntegerError {
             }
             IntegerError::InvalidValue => {
                 write!(f, "[IntegerError] Invalid value.")
+            }
+            IntegerError::InvalidFirstChar => {
+                write!(f, "[IntegerError] Invalid first char.")
+            }
+            IntegerError::InvalidTerminate => {
+                write!(f, "[IntegerError] Invalid terminate.")
             }
         }
     }
@@ -30,13 +38,12 @@ impl Integer {
     #[inline]
     pub fn new(input: i64) -> Integer {
         let string = input.to_string();
-        let mut vector = Vec::with_capacity(string.len() + 3);
-        vector.put_u8(0x3a); // ":"
-        vector.put_slice(string.as_bytes());
-        vector.put_u8(0x0d); // CR
-        vector.put_u8(0x0a); // LF
-        let bytes = Bytes::from(vector);
-        Integer(bytes)
+        let mut bytes = BytesMut::with_capacity(string.len() + 3);
+        bytes.put_u8(0x3a); // ":"
+        bytes.put_slice(string.as_bytes());
+        bytes.put_u8(0x0d); // CR
+        bytes.put_u8(0x0a); // LF
+        Integer(bytes.freeze())
     }
 
     #[inline]
@@ -71,6 +78,24 @@ impl Integer {
             return Err(IntegerError::InvalidValueChar);
         }
         Ok(())
+    }
+
+    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Integer, IntegerError> {
+        let mut index = *start;
+        if input[index] != 0x3a {
+            return Err(IntegerError::InvalidFirstChar);
+        }
+        index += 1;
+        while index < *end && input[index] != 0x0d && input[index] != 0x0a {
+            index += 1;
+        }
+        if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
+            return Err(IntegerError::InvalidTerminate);
+        }
+        let mut bytes = BytesMut::with_capacity(index - *start + 2);
+        bytes.extend_from_slice(&input[*start..=index + 1]);
+        *start = index + 2;
+        Ok(Self(bytes.freeze()))
     }
 }
 
@@ -110,5 +135,17 @@ mod tests_integer {
     fn test_validate_invalid_value() {
         let value = b"100\r\n";
         assert_eq!(Integer::validate_value(value).unwrap(), ())
+    }
+
+    #[test]
+    fn test_parse() {
+        let string = ":100\r\n+bar\r\n";
+        let mut cursor = 0;
+        let end = string.len();
+        assert_eq!(
+            Integer::parse(string.as_bytes(), &mut cursor, &end).unwrap(),
+            Integer::new(100)
+        );
+        assert_eq!(cursor, 6);
     }
 }

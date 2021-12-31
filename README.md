@@ -2,7 +2,7 @@
 
 REdis Serialization Protocol
 
-## install
+## Install
 
 add `resp-protocol` to `Cargo.toml`
 ``` toml
@@ -10,7 +10,7 @@ add `resp-protocol` to `Cargo.toml`
 resp-protocol = "0.0.2"
 ```
 
-## usage
+## Usage
 
 ``` rust
 use resp_protocol;
@@ -75,4 +75,31 @@ use resp_protocol::Error;
 
 let string: &str = "-ERROR\r\n";
 let error: Error = Error::parse(string.as_bytes(), &mut 0, &string.len()).unwrap();
+```
+
+### Integer
+
+#### Examples
+
+##### Value
+
+``` text
+":100\r\n"
+```
+
+##### Build
+
+``` rust
+use resp_protocol::Integer;
+
+let integer: Integer = Integer::new(-100i64);
+```
+
+##### Parse
+
+``` rust
+use resp_protocol::Integer;
+
+let string: &str = ":-100\r\n";
+let integer: Integer = Integer::parse(string.as_bytes(), &mut 0, &string.len()).unwrap();
 ```
