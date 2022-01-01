@@ -7,7 +7,7 @@ REdis Serialization Protocol
 add `resp-protocol` to `Cargo.toml`
 ``` toml
 [dependencies]
-resp-protocol = "0.0.3"
+resp-protocol = "0.0.4"
 ```
 
 ## Usage
@@ -102,4 +102,31 @@ use resp_protocol::Integer;
 
 let string: &str = ":-100\r\n";
 let integer: Integer = Integer::parse(string.as_bytes(), &mut 0, &string.len()).unwrap();
+```
+
+### Bulk string
+
+#### Examples
+
+##### Value
+
+``` text
+"$6\r\nfoobar\r\n"
+```
+
+##### Build
+
+``` rust
+use resp_protocol::BulkString;
+
+let bulk_string: BulkString = BulkString::new(b"foobar");
+```
+
+##### Parse
+
+``` rust
+use resp_protocol::BulkString;
+
+let string: &str = "$6\r\nfoobar\r\n";
+let bulk_string: BulkString = BulkString::parse(string.as_bytes(), &mut 0, &string.len()).unwrap();
 ```
