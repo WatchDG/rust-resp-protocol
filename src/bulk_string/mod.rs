@@ -67,9 +67,21 @@ impl BulkString {
     }
 
     #[inline]
-    pub fn from_slice(input: &[u8]) -> BulkString {
+    pub fn from_bytes(input: Bytes) -> Self {
+        Self(input)
+    }
+
+    #[inline]
+    pub fn from_slice(input: &[u8]) -> Self {
         let bytes = Bytes::copy_from_slice(input);
-        BulkString(bytes)
+        Self::from_bytes(bytes)
+    }
+
+    #[inline]
+    pub unsafe fn from_raw(ptr: *mut u8, length: usize) -> Self {
+        let vector = Vec::from_raw_parts(ptr, length, length);
+        let bytes = Bytes::from(vector);
+        Self::from_bytes(bytes)
     }
 
     pub fn parse(

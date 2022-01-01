@@ -90,9 +90,32 @@ impl SimpleString {
     }
 
     #[inline]
-    pub fn from_slice(input: &[u8]) -> SimpleString {
+    pub fn from_bytes(input: Bytes) -> Self {
+        Self(input)
+    }
+
+    #[inline]
+    pub fn from_slice(input: &[u8]) -> Self {
         let bytes = Bytes::copy_from_slice(input);
-        SimpleString(bytes)
+        Self::from_bytes(bytes)
+    }
+
+    /// Build as new Simple String from raw pointer
+    ///
+    /// # Example
+    /// ```
+    /// use resp_protocol::SimpleString;
+    /// use std::mem::ManuallyDrop;
+    ///
+    /// let string: String = "+OK\r\n".to_owned();
+    /// let mut mdrop_string: ManuallyDrop<String> = ManuallyDrop::new(string);
+    /// let simple_string: SimpleString = unsafe { SimpleString::from_raw(mdrop_string.as_mut_ptr(), mdrop_string.len()) };
+    /// ```
+    #[inline]
+    pub unsafe fn from_raw(ptr: *mut u8, length: usize) -> Self {
+        let vector = Vec::from_raw_parts(ptr, length, length);
+        let bytes = Bytes::from(vector);
+        Self::from_bytes(bytes)
     }
 
     pub fn parse(
