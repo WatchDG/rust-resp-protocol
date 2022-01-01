@@ -27,7 +27,7 @@ impl fmt::Display for SimpleStringError {
 
 impl Error for SimpleStringError {}
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SimpleString(Bytes);
 
 /// Simple string type
@@ -89,13 +89,19 @@ impl SimpleString {
         Ok(())
     }
 
+    #[inline]
+    pub fn from_slice(input: &[u8]) -> SimpleString {
+        let bytes = Bytes::copy_from_slice(input);
+        SimpleString(bytes)
+    }
+
     pub fn parse(
         input: &[u8],
         start: &mut usize,
         end: &usize,
     ) -> Result<SimpleString, SimpleStringError> {
         let mut index = *start;
-        if input[index] != 0x2b {
+        if index >= *end || input[index] != 0x2b {
             return Err(SimpleStringError::InvalidFirstChar);
         }
         index += 1;
@@ -105,8 +111,9 @@ impl SimpleString {
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
             return Err(SimpleStringError::InvalidTerminate);
         }
-        let value = Self::new(&input[(*start + 1)..index]);
-        *start = index + 2;
+        index += 2;
+        let value = Self::from_slice(&input[*start..index]);
+        *start = index;
         Ok(value)
     }
 }

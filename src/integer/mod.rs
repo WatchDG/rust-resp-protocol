@@ -31,7 +31,7 @@ impl fmt::Display for IntegerError {
 
 impl Error for IntegerError {}
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Integer(Bytes);
 
 impl Integer {
@@ -80,9 +80,15 @@ impl Integer {
         Ok(())
     }
 
+    #[inline]
+    pub fn from_slice(input: &[u8]) -> Integer {
+        let bytes = Bytes::copy_from_slice(input);
+        Integer(bytes)
+    }
+
     pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Integer, IntegerError> {
         let mut index = *start;
-        if input[index] != 0x3a {
+        if index >= *end || input[index] != 0x3a {
             return Err(IntegerError::InvalidFirstChar);
         }
         index += 1;
@@ -92,10 +98,10 @@ impl Integer {
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
             return Err(IntegerError::InvalidTerminate);
         }
-        let mut bytes = BytesMut::with_capacity(index - *start + 2);
-        bytes.extend_from_slice(&input[*start..=index + 1]);
-        *start = index + 2;
-        Ok(Self(bytes.freeze()))
+        index += 2;
+        let value = Self::from_slice(&input[*start..index]);
+        *start = index;
+        Ok(value)
     }
 }
 

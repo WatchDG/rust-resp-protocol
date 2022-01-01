@@ -39,7 +39,7 @@ impl fmt::Display for BulkStringError {
 
 impl Error for BulkStringError {}
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BulkString(Bytes);
 
 impl BulkString {
@@ -64,6 +64,12 @@ impl BulkString {
     #[inline]
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    #[inline]
+    pub fn from_slice(input: &[u8]) -> BulkString {
+        let bytes = Bytes::copy_from_slice(input);
+        BulkString(bytes)
     }
 
     pub fn parse(
@@ -107,8 +113,9 @@ impl BulkString {
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
             return Err(BulkStringError::InvalidTerminate);
         }
-        let value = Self::new(&input[value_start_index..index]);
-        *start = index + 2;
+        index += 2;
+        let value = Self::from_slice(&input[*start..index]);
+        *start = index;
         Ok(value)
     }
 }

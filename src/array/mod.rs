@@ -4,7 +4,7 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 pub const EMPTY_ARRAY: Array = Array(Bytes::from_static(b"*0\r\n"));
 pub const NULL_ARRAY: Array = Array(Bytes::from_static(b"*-1\r\n"));
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Array(Bytes);
 
 impl Array {
@@ -37,6 +37,12 @@ impl Array {
     pub fn is_null(&self) -> bool {
         self == NULL_ARRAY
     }
+
+    #[inline]
+    pub fn from_slice(input: &[u8]) -> Array {
+        let bytes = Bytes::copy_from_slice(input);
+        Array(bytes)
+    }
 }
 
 impl<'a> PartialEq<Array> for &'a Array {
@@ -61,7 +67,12 @@ impl ArrayBuilder {
     }
 
     #[inline]
-    pub fn add(&mut self, value: RespType) -> &Self {
+    pub fn value(&mut self) -> Vec<RespType> {
+        self.inner.clone()
+    }
+
+    #[inline]
+    pub fn insert(&mut self, value: RespType) -> &Self {
         self.inner.push(value);
         self
     }
@@ -104,7 +115,7 @@ mod tests_array {
     #[test]
     fn build_array_with_error() {
         let mut array_builder = ArrayBuilder::new();
-        array_builder.add(RespType::Error(Error::new(b"Invalid value.")));
+        array_builder.insert(RespType::Error(Error::new(b"Invalid value.")));
         let array = array_builder.build();
         assert_eq!(
             array.bytes(),
@@ -115,30 +126,30 @@ mod tests_array {
     #[test]
     fn build_array() {
         let mut array_builder = ArrayBuilder::new();
-        array_builder.add(RespType::SimpleString(SimpleString::new(b"foo")));
+        array_builder.insert(RespType::SimpleString(SimpleString::new(b"foo")));
         assert_eq!(
             array_builder.build().bytes(),
             Bytes::from_static(b"*1\r\n+foo\r\n")
         );
-        array_builder.add(RespType::BulkString(BulkString::new(b"bar")));
+        array_builder.insert(RespType::BulkString(BulkString::new(b"bar")));
         assert_eq!(
             array_builder.build().bytes(),
             Bytes::from_static(b"*2\r\n+foo\r\n$3\r\nbar\r\n")
         );
-        array_builder.add(RespType::Integer(Integer::new(-100)));
+        array_builder.insert(RespType::Integer(Integer::new(-100)));
         assert_eq!(
             array_builder.build().bytes(),
             Bytes::from_static(b"*3\r\n+foo\r\n$3\r\nbar\r\n:-100\r\n")
         );
         let mut subarray_builder = ArrayBuilder::new();
-        subarray_builder.add(RespType::SimpleString(SimpleString::new(b"foo")));
-        subarray_builder.add(RespType::SimpleString(SimpleString::new(b"bar")));
+        subarray_builder.insert(RespType::SimpleString(SimpleString::new(b"foo")));
+        subarray_builder.insert(RespType::SimpleString(SimpleString::new(b"bar")));
         let subarray = subarray_builder.build();
         assert_eq!(
             subarray.bytes(),
             Bytes::from_static(b"*2\r\n+foo\r\n+bar\r\n")
         );
-        array_builder.add(RespType::Array(subarray));
+        array_builder.insert(RespType::Array(subarray));
         assert_eq!(
             array_builder.build().bytes(),
             Bytes::from_static(b"*4\r\n+foo\r\n$3\r\nbar\r\n:-100\r\n*2\r\n+foo\r\n+bar\r\n")

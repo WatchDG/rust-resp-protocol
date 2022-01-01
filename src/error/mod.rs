@@ -27,7 +27,7 @@ impl fmt::Display for ErrorError {
 
 impl error::Error for ErrorError {}
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Error(Bytes);
 
 /// Error type
@@ -85,9 +85,15 @@ impl Error {
         Ok(())
     }
 
+    #[inline]
+    pub fn from_slice(input: &[u8]) -> Error {
+        let bytes = Bytes::copy_from_slice(input);
+        Error(bytes)
+    }
+
     pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Error, ErrorError> {
         let mut index = *start;
-        if input[index] != 0x2d {
+        if index >= *end || input[index] != 0x2d {
             return Err(ErrorError::InvalidFirstChar);
         }
         index += 1;
@@ -97,8 +103,9 @@ impl Error {
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
             return Err(ErrorError::InvalidTerminate);
         }
-        let value = Self::new(&input[(*start + 1)..index]);
-        *start = index + 2;
+        index += 2;
+        let value = Self::from_slice(&input[*start..index]);
+        *start = index;
         Ok(value)
     }
 }

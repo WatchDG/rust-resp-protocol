@@ -12,6 +12,7 @@ pub use error::{Error, ErrorError};
 pub use integer::{Integer, IntegerError};
 pub use simple_string::{SimpleString, SimpleStringError};
 
+#[derive(Debug, Clone)]
 pub enum RespType {
     SimpleString(SimpleString),
     Error(Error),
