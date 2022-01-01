@@ -43,7 +43,7 @@ impl Error for BulkStringError {}
 pub struct BulkString(Bytes);
 
 impl BulkString {
-    pub fn new(input: &[u8]) -> BulkString {
+    pub fn new(input: &[u8]) -> Self {
         let length_string = input.len().to_string();
         let mut bytes = BytesMut::with_capacity(input.len() + length_string.len() + 5);
         bytes.put_u8(0x24); // "$"
@@ -53,7 +53,7 @@ impl BulkString {
         bytes.put_slice(input);
         bytes.put_u8(0x0d); // CR
         bytes.put_u8(0x0a); // LF
-        BulkString(bytes.freeze())
+        Self::from_bytes(bytes.freeze())
     }
 
     #[inline]
@@ -84,11 +84,11 @@ impl BulkString {
         Self::from_bytes(bytes)
     }
 
-    pub fn parse(
+    pub fn while_valid(
         input: &[u8],
         start: &mut usize,
         end: &usize,
-    ) -> Result<BulkString, BulkStringError> {
+    ) -> Result<(), BulkStringError> {
         let mut index = *start;
         if index >= *end || input[index] != 0x24 {
             return Err(BulkStringError::InvalidFirstChar);
@@ -125,7 +125,13 @@ impl BulkString {
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
             return Err(BulkStringError::InvalidTerminate);
         }
-        index += 2;
+        *start = index + 2;
+        Ok(())
+    }
+
+    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Self, BulkStringError> {
+        let mut index = *start;
+        Self::while_valid(input, &mut index, end)?;
         let value = Self::from_slice(&input[*start..index]);
         *start = index;
         Ok(value)

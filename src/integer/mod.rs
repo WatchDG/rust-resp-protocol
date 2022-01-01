@@ -36,14 +36,14 @@ pub struct Integer(Bytes);
 
 impl Integer {
     #[inline]
-    pub fn new(input: i64) -> Integer {
+    pub fn new(input: i64) -> Self {
         let string = input.to_string();
         let mut bytes = BytesMut::with_capacity(string.len() + 3);
         bytes.put_u8(0x3a); // ":"
         bytes.put_slice(string.as_bytes());
         bytes.put_u8(0x0d); // CR
         bytes.put_u8(0x0a); // LF
-        Integer(bytes.freeze())
+        Self::from_bytes(bytes.freeze())
     }
 
     #[inline]
@@ -98,7 +98,7 @@ impl Integer {
         Self::from_bytes(bytes)
     }
 
-    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Integer, IntegerError> {
+    pub fn while_valid(input: &[u8], start: &mut usize, end: &usize) -> Result<(), IntegerError> {
         let mut index = *start;
         if index >= *end || input[index] != 0x3a {
             return Err(IntegerError::InvalidFirstChar);
@@ -110,7 +110,13 @@ impl Integer {
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
             return Err(IntegerError::InvalidTerminate);
         }
-        index += 2;
+        *start = index + 2;
+        Ok(())
+    }
+
+    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Self, IntegerError> {
+        let mut index = *start;
+        Self::while_valid(input, &mut index, end)?;
         let value = Self::from_slice(&input[*start..index]);
         *start = index;
         Ok(value)

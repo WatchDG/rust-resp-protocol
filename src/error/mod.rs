@@ -1,4 +1,4 @@
-use bytes::{Buf, BufMut, Bytes};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::error;
 use std::fmt;
 
@@ -41,14 +41,13 @@ impl Error {
     /// let error = Error::new(b"Invalid type.");
     /// ```
     #[inline]
-    pub fn new(input: &[u8]) -> Error {
-        let mut vector = Vec::with_capacity(input.len() + 3);
-        vector.put_u8(0x2d); // "-"
-        vector.put_slice(input);
-        vector.put_u8(0x0d); // CR
-        vector.put_u8(0x0a); // LF
-        let bytes = Bytes::from(vector);
-        Error(bytes)
+    pub fn new(input: &[u8]) -> Self {
+        let mut bytes = BytesMut::with_capacity(input.len() + 3);
+        bytes.put_u8(0x2d); // "-"
+        bytes.put_slice(input);
+        bytes.put_u8(0x0d); // CR
+        bytes.put_u8(0x0a); // LF
+        Self::from_bytes(bytes.freeze())
     }
 
     #[inline]
@@ -103,7 +102,7 @@ impl Error {
         Self::from_bytes(bytes)
     }
 
-    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Error, ErrorError> {
+    pub fn while_valid(input: &[u8], start: &mut usize, end: &usize) -> Result<(), ErrorError> {
         let mut index = *start;
         if index >= *end || input[index] != 0x2d {
             return Err(ErrorError::InvalidFirstChar);
@@ -115,7 +114,13 @@ impl Error {
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
             return Err(ErrorError::InvalidTerminate);
         }
-        index += 2;
+        *start = index + 2;
+        Ok(())
+    }
+
+    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Self, ErrorError> {
+        let mut index = *start;
+        Self::while_valid(input, &mut index, end)?;
         let value = Self::from_slice(&input[*start..index]);
         *start = index;
         Ok(value)

@@ -41,13 +41,13 @@ impl SimpleString {
     /// let simple_string = SimpleString::new(b"OK");
     /// ```
     #[inline]
-    pub fn new(value: &[u8]) -> SimpleString {
+    pub fn new(value: &[u8]) -> Self {
         let mut bytes = BytesMut::with_capacity(value.len() + 3);
         bytes.put_u8(0x2b); // "+"
         bytes.put_slice(value);
         bytes.put_u8(0x0d); // CR
         bytes.put_u8(0x0a); // LF
-        SimpleString(bytes.freeze())
+        Self::from_bytes(bytes.freeze())
     }
 
     #[inline]
@@ -63,7 +63,7 @@ impl SimpleString {
     #[inline]
     pub fn value(&self) -> Vec<u8> {
         let length = self.len();
-        let mut bytes = self.0.slice(1..(length - 2));
+        let mut bytes = self.bytes().slice(1..(length - 2));
         let mut vector = Vec::<u8>::with_capacity(length - 3);
         unsafe {
             vector.set_len(length - 3);
@@ -118,11 +118,11 @@ impl SimpleString {
         Self::from_bytes(bytes)
     }
 
-    pub fn parse(
+    pub fn while_valid(
         input: &[u8],
         start: &mut usize,
         end: &usize,
-    ) -> Result<SimpleString, SimpleStringError> {
+    ) -> Result<(), SimpleStringError> {
         let mut index = *start;
         if index >= *end || input[index] != 0x2b {
             return Err(SimpleStringError::InvalidFirstChar);
@@ -133,8 +133,14 @@ impl SimpleString {
         }
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
             return Err(SimpleStringError::InvalidTerminate);
-        }
-        index += 2;
+        };
+        *start = index + 2;
+        Ok(())
+    }
+
+    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Self, SimpleStringError> {
+        let mut index = *start;
+        Self::while_valid(input, &mut index, end)?;
         let value = Self::from_slice(&input[*start..index]);
         *start = index;
         Ok(value)
