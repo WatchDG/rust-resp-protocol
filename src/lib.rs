@@ -17,6 +17,7 @@ pub enum RespError {
     InvalidFirstChar,
     InvalidLength,
     InvalidLengthSeparator,
+    InvalidNullValue,
     InvalidValue,
     InvalidTerminate,
     LengthsNotMatch,
@@ -36,6 +37,9 @@ impl std::fmt::Display for RespError {
             }
             RespError::InvalidValue => {
                 write!(f, "Invalid value.")
+            }
+            RespError::InvalidNullValue => {
+                write!(f, "Invalid null value.")
             }
             RespError::LengthsNotMatch => {
                 write!(f, "Lengths do not match.")

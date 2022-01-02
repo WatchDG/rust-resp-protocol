@@ -59,20 +59,20 @@ impl Array {
 
     pub fn while_valid(input: &[u8], start: &mut usize, end: &usize) -> Result<(), RespError> {
         let mut index = *start;
-        if index >= *end || input[index] != 0x2a {
+        if index + 3 >= *end {
+            return Err(RespError::InvalidValue);
+        }
+        if input[index] != 0x2a {
             return Err(RespError::InvalidFirstChar);
         }
         index += 1;
-        if index + 2 >= *end {
-            return Err(RespError::InvalidValue);
-        }
         if input[index] == 0x2d {
             if input[index + 1] != 0x31
                 || input[index + 2] != 0x0d
                 || index + 3 == *end
                 || input[index + 3] != 0x0a
             {
-                return Err(RespError::InvalidValue);
+                return Err(RespError::InvalidNullValue);
             }
             *start = index + 4;
             return Ok(());
@@ -217,30 +217,18 @@ impl ArrayBuilder {
 #[cfg(test)]
 mod tests_array {
     use crate::{
-        Array, ArrayBuilder, BulkString, Error, Integer, RespType, SimpleString, EMPTY_ARRAY,
-        NULL_ARRAY,
+        Array, ArrayBuilder, BulkString, Integer, RespType, SimpleString, EMPTY_ARRAY, NULL_ARRAY,
     };
     use bytes::Bytes;
 
     #[test]
-    fn build_empty_array() {
+    fn test_build_empty_array() {
         let array_builder = ArrayBuilder::new();
         assert_eq!(array_builder.build(), EMPTY_ARRAY)
     }
 
     #[test]
-    fn build_array_with_error() {
-        let mut array_builder = ArrayBuilder::new();
-        array_builder.insert(RespType::Error(Error::new(b"Invalid value.")));
-        let array = array_builder.build();
-        assert_eq!(
-            array.bytes(),
-            Bytes::from_static(b"*1\r\n-Invalid value.\r\n")
-        )
-    }
-
-    #[test]
-    fn build_array() {
+    fn test_build_array() {
         let mut array_builder = ArrayBuilder::new();
         array_builder.insert(RespType::SimpleString(SimpleString::new(b"foo")));
         assert_eq!(

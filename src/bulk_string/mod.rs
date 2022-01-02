@@ -91,27 +91,23 @@ impl BulkString {
 
     pub fn while_valid(input: &[u8], start: &mut usize, end: &usize) -> Result<(), RespError> {
         let mut index = *start;
-        if index >= *end || input[index] != 0x24 {
+        if index + 4 >= *end {
+            return Err(RespError::InvalidValue);
+        }
+        if input[index] != 0x24 {
             return Err(RespError::InvalidFirstChar);
         }
         index += 1;
-
-        if index + 3 >= *end {
-            return Err(RespError::InvalidValue);
-        }
-
         if input[index] == 0x2d {
             if input[index + 1] != 0x31 || input[index + 2] != 0x0d || input[index + 3] != 0x0a {
-                return Err(RespError::InvalidValue);
+                return Err(RespError::InvalidNullValue);
             }
             *start = index + 4;
             return Ok(());
         }
-
         if input[index] == 0x30 && input[index + 1] >= 0x30 && input[index + 1] <= 0x39 {
             return Err(RespError::InvalidLength);
         }
-
         while index < *end && input[index] >= 0x30 && input[index] <= 0x39 {
             index += 1;
         }

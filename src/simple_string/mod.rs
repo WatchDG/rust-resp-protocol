@@ -24,16 +24,44 @@ impl SimpleString {
         Self::from_bytes(bytes.freeze())
     }
 
+    ///
+    ///
+    /// ``` rust
+    /// use resp_protocol::SimpleString;
+    /// use bytes::Bytes;
+    ///
+    /// let simple_string: SimpleString = SimpleString::new(b"OK");
+    /// let bytes: Bytes = simple_string.bytes();
+    /// println!("{:?}", bytes); // b"+OK\r\n"
+    /// ```
     #[inline]
     pub fn bytes(&self) -> Bytes {
         self.0.clone()
     }
 
+    ///
+    ///
+    /// ``` rust
+    /// use resp_protocol::SimpleString;
+    ///
+    /// let simple_string: SimpleString = SimpleString::new(b"OK");
+    /// let length: usize = simple_string.len();
+    /// println!("{:?}", length); // 5
+    /// ```
     #[inline]
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    ///
+    ///
+    /// ``` rust
+    /// use resp_protocol::SimpleString;
+    ///
+    /// let simple_string: SimpleString = SimpleString::new(b"OK");
+    /// let value: Vec<u8> = simple_string.value();
+    /// println!("{:?}", value); // [79, 75]
+    /// ```
     #[inline]
     pub fn value(&self) -> Vec<u8> {
         let length = self.len();
@@ -46,6 +74,15 @@ impl SimpleString {
         vector
     }
 
+    ///
+    ///
+    /// ``` rust
+    /// use resp_protocol::SimpleString;
+    ///
+    /// let simple_string: SimpleString = SimpleString::new(b"OK");
+    /// let value_length: usize = simple_string.value_len();
+    /// println!("{:?}", value_length); // 2
+    /// ```
     #[inline]
     pub fn value_len(&self) -> usize {
         self.len() - 3
