@@ -7,7 +7,7 @@ REdis Serialization Protocol
 add `resp-protocol` to `Cargo.toml`
 ``` toml
 [dependencies]
-resp-protocol = "0.0.8"
+resp-protocol = "0.0.9"
 ```
 
 ## Usage

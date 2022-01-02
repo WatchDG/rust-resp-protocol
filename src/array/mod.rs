@@ -63,9 +63,21 @@ impl Array {
             return Err(RespError::InvalidFirstChar);
         }
         index += 1;
-        if index + 1 >= *end
-            || (input[index] == 0x30 && input[index + 1] >= 0x30 && input[index + 1] <= 0x39)
-        {
+        if index + 2 >= *end {
+            return Err(RespError::InvalidValue);
+        }
+        if input[index] == 0x2d {
+            if input[index + 1] != 0x31
+                || input[index + 2] != 0x0d
+                || index + 3 == *end
+                || input[index + 3] != 0x0a
+            {
+                return Err(RespError::InvalidValue);
+            }
+            *start = index + 4;
+            return Ok(());
+        }
+        if input[index] == 0x30 && input[index + 1] >= 0x30 && input[index + 1] <= 0x39 {
             return Err(RespError::InvalidLength);
         }
         while index < *end && input[index] >= 0x30 && input[index] <= 0x39 {
@@ -183,23 +195,22 @@ impl ArrayBuilder {
     pub fn build(&self) -> Array {
         let length = self.inner.len();
         if length == 0 {
-            EMPTY_ARRAY
-        } else {
-            let length_string = length.to_string();
-            let mut total_bytes = length_string.len() + 3;
-            for element in &self.inner {
-                total_bytes += element.len();
-            }
-            let mut bytes = BytesMut::with_capacity(total_bytes);
-            bytes.put_u8(0x2a); // "*"
-            bytes.put_slice(length_string.as_bytes());
-            bytes.put_u8(0x0d); // CR
-            bytes.put_u8(0x0a); // LF
-            for element in &self.inner {
-                bytes.put(element.bytes());
-            }
-            Array(bytes.freeze())
+            return EMPTY_ARRAY;
         }
+        let length_string = length.to_string();
+        let mut total_bytes = length_string.len() + 3;
+        for element in &self.inner {
+            total_bytes += element.len();
+        }
+        let mut bytes = BytesMut::with_capacity(total_bytes);
+        bytes.put_u8(0x2a); // "*"
+        bytes.put_slice(length_string.as_bytes());
+        bytes.put_u8(0x0d); // CR
+        bytes.put_u8(0x0a); // LF
+        for element in &self.inner {
+            bytes.put(element.bytes());
+        }
+        Array(bytes.freeze())
     }
 }
 
@@ -207,6 +218,7 @@ impl ArrayBuilder {
 mod tests_array {
     use crate::{
         Array, ArrayBuilder, BulkString, Error, Integer, RespType, SimpleString, EMPTY_ARRAY,
+        NULL_ARRAY,
     };
     use bytes::Bytes;
 
@@ -261,12 +273,23 @@ mod tests_array {
     }
 
     #[test]
-    fn parse_empty_array() {
+    fn test_parse_empty() {
         let string = "*0\r\n";
         let mut cursor = 0;
         let array = Array::parse(string.as_bytes(), &mut cursor, &string.len()).unwrap();
+
         assert_eq!(array, EMPTY_ARRAY);
         assert_eq!(cursor, 4);
+    }
+
+    #[test]
+    fn test_parse_null() {
+        let string = "*-1\r\n";
+        let mut cursor = 0;
+        let array = Array::parse(string.as_bytes(), &mut cursor, &string.len()).unwrap();
+
+        assert_eq!(array, NULL_ARRAY);
+        assert_eq!(cursor, 5);
     }
 
     #[test]

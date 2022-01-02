@@ -7,7 +7,7 @@ mod integer;
 mod simple_string;
 
 pub use array::{Array, ArrayBuilder, EMPTY_ARRAY, NULL_ARRAY};
-pub use bulk_string::BulkString;
+pub use bulk_string::{BulkString, EMPTY_BULK_STRING, NULL_BULK_STRING};
 pub use error::Error;
 pub use integer::Integer;
 pub use simple_string::SimpleString;
