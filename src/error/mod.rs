@@ -1,31 +1,5 @@
+use crate::RespError;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use std::error;
-use std::fmt;
-
-#[derive(Debug)]
-pub enum ErrorError {
-    InvalidValueChar,
-    InvalidFirstChar,
-    InvalidTerminate,
-}
-
-impl fmt::Display for ErrorError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ErrorError::InvalidValueChar => {
-                write!(f, "[ErrorError] Invalid value char.")
-            }
-            ErrorError::InvalidFirstChar => {
-                write!(f, "[ErrorError] Invalid first char.")
-            }
-            ErrorError::InvalidTerminate => {
-                write!(f, "[ErrorError] Invalid terminate.")
-            }
-        }
-    }
-}
-
-impl error::Error for ErrorError {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Error(Bytes);
@@ -72,14 +46,14 @@ impl Error {
         vector
     }
 
-    pub fn validate_value(input: &[u8]) -> Result<(), ErrorError> {
+    pub fn validate_value(input: &[u8]) -> Result<(), RespError> {
         let mut index = 0;
         let length = input.len();
         while index < length && input[index] != 0x0d && input[index] != 0x0a {
             index += 1;
         }
         if index != length {
-            return Err(ErrorError::InvalidValueChar);
+            return Err(RespError::InvalidValue);
         }
         Ok(())
     }
@@ -102,23 +76,23 @@ impl Error {
         Self::from_bytes(bytes)
     }
 
-    pub fn while_valid(input: &[u8], start: &mut usize, end: &usize) -> Result<(), ErrorError> {
+    pub fn while_valid(input: &[u8], start: &mut usize, end: &usize) -> Result<(), RespError> {
         let mut index = *start;
         if index >= *end || input[index] != 0x2d {
-            return Err(ErrorError::InvalidFirstChar);
+            return Err(RespError::InvalidFirstChar);
         }
         index += 1;
         while index < *end && input[index] != 0x0d && input[index] != 0x0a {
             index += 1;
         }
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
-            return Err(ErrorError::InvalidTerminate);
+            return Err(RespError::InvalidTerminate);
         }
         *start = index + 2;
         Ok(())
     }
 
-    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Self, ErrorError> {
+    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Self, RespError> {
         let mut index = *start;
         Self::while_valid(input, &mut index, end)?;
         let value = Self::from_slice(&input[*start..index]);
@@ -160,7 +134,7 @@ mod tests_error {
     }
 
     #[test]
-    #[should_panic(expected = "InvalidValueChar")]
+    #[should_panic(expected = "InvalidValue")]
     fn test_validate_invalid_value() {
         let value = b"Error\r\n message";
         assert_eq!(Error::validate_value(value).unwrap(), ())

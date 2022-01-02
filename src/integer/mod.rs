@@ -1,35 +1,5 @@
+use crate::RespError;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use std::error::Error;
-use std::fmt;
-
-#[derive(Debug)]
-pub enum IntegerError {
-    InvalidValueChar,
-    InvalidValue,
-    InvalidFirstChar,
-    InvalidTerminate,
-}
-
-impl fmt::Display for IntegerError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            IntegerError::InvalidValueChar => {
-                write!(f, "[IntegerError] Invalid value char.")
-            }
-            IntegerError::InvalidValue => {
-                write!(f, "[IntegerError] Invalid value.")
-            }
-            IntegerError::InvalidFirstChar => {
-                write!(f, "[IntegerError] Invalid first char.")
-            }
-            IntegerError::InvalidTerminate => {
-                write!(f, "[IntegerError] Invalid terminate.")
-            }
-        }
-    }
-}
-
-impl Error for IntegerError {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Integer(Bytes);
@@ -68,14 +38,14 @@ impl Integer {
         self.0.len()
     }
 
-    pub fn validate_value(input: &[u8]) -> Result<(), IntegerError> {
+    pub fn validate_value(input: &[u8]) -> Result<(), RespError> {
         let mut index = 0;
         let length = input.len();
         while index < length && input[index] != 0x0a && input[index] != 0x0d {
             index += 1;
         }
         if index != length {
-            return Err(IntegerError::InvalidValueChar);
+            return Err(RespError::InvalidValue);
         }
         Ok(())
     }
@@ -98,23 +68,23 @@ impl Integer {
         Self::from_bytes(bytes)
     }
 
-    pub fn while_valid(input: &[u8], start: &mut usize, end: &usize) -> Result<(), IntegerError> {
+    pub fn while_valid(input: &[u8], start: &mut usize, end: &usize) -> Result<(), RespError> {
         let mut index = *start;
         if index >= *end || input[index] != 0x3a {
-            return Err(IntegerError::InvalidFirstChar);
+            return Err(RespError::InvalidFirstChar);
         }
         index += 1;
         while index < *end && input[index] != 0x0d && input[index] != 0x0a {
             index += 1;
         }
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
-            return Err(IntegerError::InvalidTerminate);
+            return Err(RespError::InvalidTerminate);
         }
         *start = index + 2;
         Ok(())
     }
 
-    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Self, IntegerError> {
+    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Self, RespError> {
         let mut index = *start;
         Self::while_valid(input, &mut index, end)?;
         let value = Self::from_slice(&input[*start..index]);
@@ -155,7 +125,7 @@ mod tests_integer {
     }
 
     #[test]
-    #[should_panic(expected = "InvalidValueChar")]
+    #[should_panic(expected = "InvalidValue")]
     fn test_validate_invalid_value() {
         let value = b"100\r\n";
         assert_eq!(Integer::validate_value(value).unwrap(), ())

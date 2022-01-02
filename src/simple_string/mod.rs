@@ -1,31 +1,5 @@
+use crate::RespError;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use std::error::Error;
-use std::fmt;
-
-#[derive(Debug)]
-pub enum SimpleStringError {
-    InvalidValueChar,
-    InvalidFirstChar,
-    InvalidTerminate,
-}
-
-impl fmt::Display for SimpleStringError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            SimpleStringError::InvalidValueChar => {
-                write!(f, "[SimpleStringError] Invalid value char.")
-            }
-            SimpleStringError::InvalidFirstChar => {
-                write!(f, "[SimpleStringError] Invalid first char.")
-            }
-            SimpleStringError::InvalidTerminate => {
-                write!(f, "[SimpleStringError] Invalid terminate.")
-            }
-        }
-    }
-}
-
-impl Error for SimpleStringError {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SimpleString(Bytes);
@@ -77,14 +51,14 @@ impl SimpleString {
         self.len() - 3
     }
 
-    pub fn validate_value(input: &[u8]) -> Result<(), SimpleStringError> {
+    pub fn validate_value(input: &[u8]) -> Result<(), RespError> {
         let mut index = 0;
         let length = input.len();
         while index < length && input[index] != 0x0d && input[index] != 0x0a {
             index += 1;
         }
         if index != length {
-            return Err(SimpleStringError::InvalidValueChar);
+            return Err(RespError::InvalidValue);
         }
         Ok(())
     }
@@ -118,27 +92,23 @@ impl SimpleString {
         Self::from_bytes(bytes)
     }
 
-    pub fn while_valid(
-        input: &[u8],
-        start: &mut usize,
-        end: &usize,
-    ) -> Result<(), SimpleStringError> {
+    pub fn while_valid(input: &[u8], start: &mut usize, end: &usize) -> Result<(), RespError> {
         let mut index = *start;
         if index >= *end || input[index] != 0x2b {
-            return Err(SimpleStringError::InvalidFirstChar);
+            return Err(RespError::InvalidFirstChar);
         }
         index += 1;
         while index < *end && input[index] != 0x0d && input[index] != 0x0a {
             index += 1;
         }
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
-            return Err(SimpleStringError::InvalidTerminate);
+            return Err(RespError::InvalidTerminate);
         };
         *start = index + 2;
         Ok(())
     }
 
-    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Self, SimpleStringError> {
+    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Self, RespError> {
         let mut index = *start;
         Self::while_valid(input, &mut index, end)?;
         let value = Self::from_slice(&input[*start..index]);
@@ -194,7 +164,7 @@ mod tests_simple_string {
     }
 
     #[test]
-    #[should_panic(expected = "InvalidValueChar")]
+    #[should_panic(expected = "InvalidValue")]
     fn test_validate_invalid_value() {
         let value = b"O\r\nK";
         assert_eq!(SimpleString::validate_value(value).unwrap(), ())

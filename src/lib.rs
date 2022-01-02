@@ -1,16 +1,53 @@
 use bytes::Bytes;
 
-pub mod array;
-pub mod bulk_string;
-pub mod error;
-pub mod integer;
-pub mod simple_string;
+mod array;
+mod bulk_string;
+mod error;
+mod integer;
+mod simple_string;
 
 pub use array::{Array, ArrayBuilder, EMPTY_ARRAY, NULL_ARRAY};
 pub use bulk_string::BulkString;
-pub use error::{Error, ErrorError};
-pub use integer::{Integer, IntegerError};
-pub use simple_string::{SimpleString, SimpleStringError};
+pub use error::Error;
+pub use integer::Integer;
+pub use simple_string::SimpleString;
+
+#[derive(Debug, Clone)]
+pub enum RespError {
+    InvalidFirstChar,
+    InvalidLength,
+    InvalidLengthSeparator,
+    InvalidValue,
+    InvalidTerminate,
+    LengthsNotMatch,
+}
+
+impl std::fmt::Display for RespError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            RespError::InvalidFirstChar => {
+                write!(f, "Invalid first char.")
+            }
+            RespError::InvalidLength => {
+                write!(f, "Invalid length.")
+            }
+            RespError::InvalidLengthSeparator => {
+                write!(f, "Invalid length separator.")
+            }
+            RespError::InvalidValue => {
+                write!(f, "Invalid value.")
+            }
+            RespError::LengthsNotMatch => {
+                write!(f, "Lengths do not match.")
+            }
+            RespError::InvalidTerminate => {
+                write!(f, "Invalid terminate.")
+            }
+        }
+    }
+}
+
+impl std::error::Error for RespError {}
 
 #[derive(Debug, Clone)]
 pub enum RespType {

@@ -1,43 +1,8 @@
-use crate::{BulkString, Error, Integer, RespType, SimpleString};
+use crate::{BulkString, Error, Integer, RespError, RespType, SimpleString};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use std::error;
-use std::fmt;
 
 pub const EMPTY_ARRAY: Array = Array(Bytes::from_static(b"*0\r\n"));
 pub const NULL_ARRAY: Array = Array(Bytes::from_static(b"*-1\r\n"));
-
-#[derive(Debug)]
-pub enum ArrayError {
-    InvalidFirstChar,
-    InvalidLength,
-    InvalidLengthSeparator,
-    InvalidValue,
-    InvalidTerminate,
-}
-
-impl fmt::Display for ArrayError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ArrayError::InvalidFirstChar => {
-                write!(f, "[ArrayError] Invalid first char.")
-            }
-            ArrayError::InvalidLength => {
-                write!(f, "[ArrayError] Invalid length.")
-            }
-            ArrayError::InvalidLengthSeparator => {
-                write!(f, "[ArrayError] Invalid length separator.")
-            }
-            ArrayError::InvalidValue => {
-                write!(f, "[ArrayError] Invalid value.")
-            }
-            ArrayError::InvalidTerminate => {
-                write!(f, "[ArrayError] Invalid terminate.")
-            }
-        }
-    }
-}
-
-impl error::Error for ArrayError {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Array(Bytes);
@@ -92,26 +57,22 @@ impl Array {
         Self::from_bytes(bytes)
     }
 
-    pub fn while_valid(
-        input: &[u8],
-        start: &mut usize,
-        end: &usize,
-    ) -> Result<(), Box<dyn error::Error>> {
+    pub fn while_valid(input: &[u8], start: &mut usize, end: &usize) -> Result<(), RespError> {
         let mut index = *start;
         if index >= *end || input[index] != 0x2a {
-            return Err(ArrayError::InvalidFirstChar.into());
+            return Err(RespError::InvalidFirstChar);
         }
         index += 1;
         if index + 1 >= *end
             || (input[index] == 0x30 && input[index + 1] >= 0x30 && input[index + 1] <= 0x39)
         {
-            return Err(ArrayError::InvalidLength.into());
+            return Err(RespError::InvalidLength);
         }
         while index < *end && input[index] >= 0x30 && input[index] <= 0x39 {
             index += 1;
         }
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
-            return Err(ArrayError::InvalidLengthSeparator.into());
+            return Err(RespError::InvalidLengthSeparator);
         }
         let length = unsafe {
             String::from_utf8_unchecked(input[*start + 1..index].to_vec())
@@ -124,7 +85,7 @@ impl Array {
             return Ok(());
         }
         if index >= *end {
-            return Err(ArrayError::InvalidValue.into());
+            return Err(RespError::InvalidValue);
         }
         let mut count = 0;
         while count < length {
@@ -145,7 +106,7 @@ impl Array {
                     Self::while_valid(input, &mut index, end)?;
                 }
                 _ => {
-                    return Err(ArrayError::InvalidValue.into());
+                    return Err(RespError::InvalidValue);
                 }
             }
             count += 1;
@@ -154,11 +115,7 @@ impl Array {
         Ok(())
     }
 
-    pub fn parse(
-        input: &[u8],
-        start: &mut usize,
-        end: &usize,
-    ) -> Result<Self, Box<dyn error::Error>> {
+    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Self, RespError> {
         let mut index = *start;
         Self::while_valid(input, &mut index, end)?;
         let value = Self::from_slice(&input[*start..index]);
@@ -209,8 +166,11 @@ impl ArrayBuilder {
     /// use resp_protocol::{RespType, Array, ArrayBuilder, SimpleString};
     ///
     /// let mut array_builder: ArrayBuilder = ArrayBuilder::new();
+    ///
     /// let simple_string: SimpleString = SimpleString::new(b"OK");
+    ///
     /// array_builder.insert(RespType::SimpleString(simple_string));
+    ///
     /// let array: Array = array_builder.build();
     /// ```
     #[inline]

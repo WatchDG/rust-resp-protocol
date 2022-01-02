@@ -1,43 +1,5 @@
+use crate::RespError;
 use bytes::{BufMut, Bytes, BytesMut};
-use std::error::Error;
-use std::fmt;
-
-#[derive(Debug)]
-pub enum BulkStringError {
-    InvalidValue,
-    InvalidFirstChar,
-    InvalidLength,
-    InvalidLengthSeparator,
-    InvalidTerminate,
-    LengthsNotMatch,
-}
-
-impl fmt::Display for BulkStringError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            BulkStringError::InvalidValue => {
-                write!(f, "[BulkStringError] Invalid value.")
-            }
-            BulkStringError::InvalidFirstChar => {
-                write!(f, "[BulkStringError] Invalid first char.")
-            }
-            BulkStringError::InvalidLength => {
-                write!(f, "[BulkStringError] Invalid length.")
-            }
-            BulkStringError::InvalidLengthSeparator => {
-                write!(f, "[BulkStringError] Invalid length separator.")
-            }
-            BulkStringError::InvalidTerminate => {
-                write!(f, "[BulkStringError] Invalid terminate.")
-            }
-            BulkStringError::LengthsNotMatch => {
-                write!(f, "[BulkStringError] Lengths do not match.")
-            }
-        }
-    }
-}
-
-impl Error for BulkStringError {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BulkString(Bytes);
@@ -84,26 +46,22 @@ impl BulkString {
         Self::from_bytes(bytes)
     }
 
-    pub fn while_valid(
-        input: &[u8],
-        start: &mut usize,
-        end: &usize,
-    ) -> Result<(), BulkStringError> {
+    pub fn while_valid(input: &[u8], start: &mut usize, end: &usize) -> Result<(), RespError> {
         let mut index = *start;
         if index >= *end || input[index] != 0x24 {
-            return Err(BulkStringError::InvalidFirstChar);
+            return Err(RespError::InvalidFirstChar);
         }
         index += 1;
         if index + 1 >= *end
             || (input[index] == 0x30 && input[index + 1] >= 0x30 && input[index + 1] <= 0x39)
         {
-            return Err(BulkStringError::InvalidLength);
+            return Err(RespError::InvalidLength);
         }
         while index < *end && input[index] >= 0x30 && input[index] <= 0x39 {
             index += 1;
         }
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
-            return Err(BulkStringError::InvalidLengthSeparator);
+            return Err(RespError::InvalidLengthSeparator);
         }
         let length = unsafe {
             String::from_utf8_unchecked(input[*start + 1..index].to_vec())
@@ -120,16 +78,16 @@ impl BulkString {
             index += 1;
         }
         if length != index - value_start_index {
-            return Err(BulkStringError::LengthsNotMatch);
+            return Err(RespError::LengthsNotMatch);
         }
         if index + 1 >= *end || input[index] != 0x0d || input[index + 1] != 0x0a {
-            return Err(BulkStringError::InvalidTerminate);
+            return Err(RespError::InvalidTerminate);
         }
         *start = index + 2;
         Ok(())
     }
 
-    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Self, BulkStringError> {
+    pub fn parse(input: &[u8], start: &mut usize, end: &usize) -> Result<Self, RespError> {
         let mut index = *start;
         Self::while_valid(input, &mut index, end)?;
         let value = Self::from_slice(&input[*start..index]);
